@@ -16,7 +16,22 @@ const EMBEDDING_URL = (process.env.EMBEDDING_URL || 'http://localhost:5000') + '
 
 app.post('/generate-content-ideas', async (req, res) => {
   try {
-    const prompt = req.body.prompt;
+    let prompt = req.body.prompt;
+
+    const allowedKeywords = ['content', 'article', 'blog', 'post', 'write', 'idea', 'text'];
+    const promptLower = prompt.toLowerCase();
+
+    const isContentRelated = allowedKeywords.some(keyword => promptLower.includes(keyword));
+
+    if (!isContentRelated) {
+      return res.status(400).json({ 
+        error: 'Prompt must be related to content generation. Please provide a relevant prompt.' 
+      });
+    }
+    
+    const contentGeneratorPrefix = "You are a professional content generator. Generate meaningful and relevant content ideas based on this prompt: ";
+
+    prompt = contentGeneratorPrefix + prompt;
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
     
     const generatedText = await getContentIdeas(prompt);
