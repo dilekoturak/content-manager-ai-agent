@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Content Manager Agent</title>
@@ -16,14 +16,14 @@
 <body>
   <h2>Content Manager Agent</h2>
 
-  <input type="text" id="promptInput" placeholder="Prompt giriniz..." />
-  <button id="generateBtn">İçerik Fikirleri Üret</button>
-  <textarea id="ideas" readonly placeholder="İçerik fikirleri burada görünecek..."></textarea>
+  <input type="text" id="promptInput" placeholder="Enter your prompt..." />
+  <button id="generateBtn">Generate Content Ideas</button>
+  <textarea id="ideas" readonly placeholder="Content ideas will appear here..."></textarea>
 
   <hr />
 
-  <input type="text" id="searchInput" placeholder="Hafızada ara..." />
-  <button id="searchBtn">Ara</button>
+  <input type="text" id="searchInput" placeholder="Search in memory..." />
+  <button id="searchBtn">Search</button>
 
   <ul id="searchResults"></ul>
 
@@ -42,10 +42,10 @@
     generateBtn.onclick = async () => {
       const prompt = promptInput.value.trim();
       if (!prompt) {
-        alert('Lütfen bir prompt giriniz.');
+        alert('Please enter a prompt.');
         return;
       }
-      ideasArea.value = 'Yükleniyor...';
+      ideasArea.value = 'Loading...';
       searchResults.innerHTML = '';
       try {
         const res = await fetch(`${BACKEND_URL}/generate-content-ideas`, {
@@ -54,23 +54,23 @@
           body: JSON.stringify({ prompt }),
         });
         const data = await res.json();
-        const text = data.ideas || 'Öneri gelmedi.';
+        const text = data.ideas || 'No suggestions received.';
         ideasArea.value = text;
 
         currentIdeas = text.split('\n').filter(line => line.trim() !== '');
 
         searchResults.innerHTML = currentIdeas.map((idea, i) =>
-          `<li data-idea="${encodeURIComponent(idea)}">[Seç] ${idea}</li>`).join('');
+          `<li data-idea="${encodeURIComponent(idea)}">[Select] ${idea}</li>`).join('');
       } catch (e) {
-        ideasArea.value = 'Hata: ' + e.message;
+        ideasArea.value = 'Error: ' + e.message;
       }
     };
 
-    // Seçilen fikri kaydet
+    // Save selected idea
     searchResults.onclick = async (e) => {
       if (e.target.tagName === 'LI' && e.target.dataset.idea) {
         const selectedIdea = decodeURIComponent(e.target.dataset.idea);
-        if (!confirm(`Seçilen fikri kaydetmek istiyor musunuz?\n\n${selectedIdea}`)) return;
+        if (!confirm(`Do you want to save the selected idea?\n\n${selectedIdea}`)) return;
 
         try {
           const res = await fetch(`${BACKEND_URL}/save-idea`, {
@@ -78,34 +78,34 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idea: selectedIdea }),
           });
-          if (!res.ok) throw new Error('Kaydetme başarısız');
-          alert('İçerik fikri başarıyla kaydedildi!');
+          if (!res.ok) throw new Error('Save failed');
+          alert('Content idea saved successfully!');
         } catch (e) {
-          alert('Hata: ' + e.message);
+          alert('Error: ' + e.message);
         }
       }
     };
 
-    // Arama yap
+    // Search memory
     searchBtn.onclick = async () => {
       const q = searchInput.value.trim();
       if (!q) {
-        alert('Arama terimi giriniz');
+        alert('Please enter a search term.');
         return;
       }
-      searchResults.innerHTML = 'Yükleniyor...';
+      searchResults.innerHTML = 'Loading...';
       try {
         const res = await fetch(`${BACKEND_URL}/search-memory?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         if (!data.results || data.results.length === 0) {
-          searchResults.innerHTML = '<li>Sonuç bulunamadı</li>';
+          searchResults.innerHTML = '<li>No results found</li>';
           return;
         }
         searchResults.innerHTML = data.results
           .map(item => `<li>${item.payload.text}</li>`)
           .join('');
       } catch (e) {
-        searchResults.innerHTML = '<li>Hata: ' + e.message + '</li>';
+        searchResults.innerHTML = '<li>Error: ' + e.message + '</li>';
       }
     };
   </script>

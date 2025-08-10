@@ -36,7 +36,7 @@ app.post('/save-idea', async (req, res) => {
     const id = Date.now();
     await saveToVectorDB(id, idea);
 
-    res.json({ success: true, message: 'saved content idea' });
+    res.json({ success: true, message: 'Content idea saved successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -46,7 +46,7 @@ app.post('/save-idea', async (req, res) => {
 app.get('/search-memory', async (req, res) => {
   try {
     const q = req.query.q;
-    if (!q) return res.status(400).json({ error: 'q parametresi gerekli' });
+    if (!q) return res.status(400).json({ error: 'q parameter is required' });
 
     const queryVector = await getEmbedding(q);
 
@@ -60,7 +60,7 @@ app.get('/search-memory', async (req, res) => {
       }),
     });
 
-    if (!searchRes.ok) throw new Error('Qdrant arama hatası');
+    if (!searchRes.ok) throw new Error('Qdrant search error');
 
     const results = await searchRes.json();
 
@@ -84,10 +84,10 @@ async function createCollection() {
         },
       }),
     });
-    if (!createRes.ok) throw new Error('Qdrant koleksiyon oluşturulamadı');
-    console.log('Qdrant koleksiyonu oluşturuldu:', COLLECTION_NAME);
+    if (!createRes.ok) throw new Error('Failed to create Qdrant collection');
+    console.log('Qdrant collection created:', COLLECTION_NAME);
   } else {
-    console.log('Qdrant koleksiyonu zaten mevcut:', COLLECTION_NAME);
+    console.log('Qdrant collection already exists:', COLLECTION_NAME);
   }
 }
 
@@ -99,7 +99,7 @@ async function getEmbedding(text) {
     body: JSON.stringify({ texts: [text] }),
   });
 
-  if (!response.ok) throw new Error('Embedding servisi hata verdi');
+  if (!response.ok) throw new Error('Embedding service error');
 
   const data = await response.json();
   return data.embeddings[0];
@@ -123,7 +123,7 @@ async function saveToVectorDB(id, text) {
     }),
   });
 
-  if (!res.ok) throw new Error('Qdrant vektör kaydetme hatası');
+  if (!res.ok) throw new Error('Failed to save vector to Qdrant');
 }
 
 // Ollama API
@@ -150,6 +150,6 @@ const PORT = process.env.PORT || 3000;
 
 createCollection().then(() => {
   app.listen(PORT, () => {
-    console.log(`API is working on ${PORT}`);
+    console.log(`API is running on port ${PORT}`);
   });
 }).catch(console.error);
