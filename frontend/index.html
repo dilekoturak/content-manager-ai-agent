@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Content Manager Agent</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; padding: 10px; }
+    button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
+    textarea { width: 100%; height: 120px; margin-top: 10px; font-family: monospace; }
+    input[type="text"] { width: 100%; padding: 8px; margin-top: 15px; box-sizing: border-box; }
+    ul { margin-top: 10px; padding-left: 20px; }
+    li { cursor: pointer; margin-bottom: 6px; }
+    li:hover { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h2>Content Manager Agent</h2>
+
+  <input type="text" id="promptInput" placeholder="Prompt giriniz..." />
+  <button id="generateBtn">İçerik Fikirleri Üret</button>
+  <textarea id="ideas" readonly placeholder="İçerik fikirleri burada görünecek..."></textarea>
+
+  <hr />
+
+  <input type="text" id="searchInput" placeholder="Hafızada ara..." />
+  <button id="searchBtn">Ara</button>
+
+  <ul id="searchResults"></ul>
+
+  <script>
+    const BACKEND_URL = 'http://localhost:3000';
+
+    const promptInput = document.getElementById('promptInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const ideasArea = document.getElementById('ideas');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    let currentIdeas = [];
+
+    generateBtn.onclick = async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) {
+        alert('Lütfen bir prompt giriniz.');
+        return;
+      }
+      ideasArea.value = 'Yükleniyor...';
+      searchResults.innerHTML = '';
+      try {
+        const res = await fetch(`${BACKEND_URL}/generate-content-ideas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        const data = await res.json();
+        const text = data.ideas || 'Öneri gelmedi.';
+        ideasArea.value = text;
+
+        currentIdeas = text.split('\n').filter(line => line.trim() !== '');
+
+        searchResults.innerHTML = currentIdeas.map((idea, i) =>
+          `<li data-idea="${encodeURIComponent(idea)}">[Seç] ${idea}</li>`).join('');
+      } catch (e) {
+        ideasArea.value = 'Hata: ' + e.message;
+      }
+    };
+
+    // Seçilen fikri kaydet
+    searchResults.onclick = async (e) => {
+      if (e.target.tagName === 'LI' && e.target.dataset.idea) {
+        const selectedIdea = decodeURIComponent(e.target.dataset.idea);
+        if (!confirm(`Seçilen fikri kaydetmek istiyor musunuz?\n\n${selectedIdea}`)) return;
+
+        try {
+          const res = await fetch(`${BACKEND_URL}/save-idea`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idea: selectedIdea }),
+          });
+          if (!res.ok) throw new Error('Kaydetme başarısız');
+          alert('İçerik fikri başarıyla kaydedildi!');
+        } catch (e) {
+          alert('Hata: ' + e.message);
+        }
+      }
+    };
+
+    // Arama yap
+    searchBtn.onclick = async () => {
+      const q = searchInput.value.trim();
+      if (!q) {
+        alert('Arama terimi giriniz');
+        return;
+      }
+      searchResults.innerHTML = 'Yükleniyor...';
+      try {
+        const res = await fetch(`${BACKEND_URL}/search-memory?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+          searchResults.innerHTML = '<li>Sonuç bulunamadı</li>';
+          return;
+        }
+        searchResults.innerHTML = data.results
+          .map(item => `<li>${item.payload.text}</li>`)
+          .join('');
+      } catch (e) {
+        searchResults.innerHTML = '<li>Hata: ' + e.message + '</li>';
+      }
+    };
+  </script>
+</body>
+</html>
